@@ -100,7 +100,26 @@ app.post("/api/users/:_id/exercises", async (req, res) => {
 
 app.get("/api/users/:_id/logs", async (req, res) => {
     try {
-        const user = await User.findById(req.params._id).populate("exercises");
+        const { from, to, limit } = req.query;
+
+        const dateQuery = {
+            date:
+                from && to
+                    ? { $gte: from, $lte: to }
+                    : from
+                    ? { $gte: from }
+                    : to
+                    ? { $lte: to }
+                    : "",
+        };
+
+        const limitQuery = limit ? { limit: limit } : {};
+
+        const user = await User.findById(req.params._id).populate({
+            path: "exercises",
+            match: dateQuery.date ? dateQuery : {},
+            options: limitQuery,
+        });
         const log = user.exercises.map((ex) => {
             return {
                 description: ex.description,
@@ -109,8 +128,6 @@ app.get("/api/users/:_id/logs", async (req, res) => {
             };
         });
 
-        const { from, to, limit } = req.query;
-
         res.json({
             username: user.username,
             count: log.length,
@@ -118,7 +135,7 @@ app.get("/api/users/:_id/logs", async (req, res) => {
             log: log,
         });
     } catch (error) {
-        res.json({ error: "invalid id" });
+        res.json({ error: "invalid id or invalid queries" });
     }
 });
 
