@@ -102,22 +102,28 @@ app.get("/api/users/:_id/logs", async (req, res) => {
     try {
         const { from, to, limit } = req.query;
 
-        const dateQuery = {
-            date:
-                from && to
-                    ? { $gte: from, $lte: to }
-                    : from
-                    ? { $gte: from }
-                    : to
-                    ? { $lte: to }
-                    : "",
-        };
+        let dateQuery = {};
+        let dateInfo = {};
+
+        if (from && to) {
+            dateQuery = { date: { $gte: from, $lte: to } };
+            dateInfo = {
+                from: new Date(from).toDateString(),
+                to: new Date(to).toDateString(),
+            };
+        } else if (from) {
+            dateQuery = { date: { $gte: from } };
+            dateInfo = { from: new Date(from).toDateString() };
+        } else if (to) {
+            dateQuery = { date: { $lte: to } };
+            dateInfo = { from: new Date(to).toDateString() };
+        }
 
         const limitQuery = limit ? { limit: limit } : {};
 
         const user = await User.findById(req.params._id).populate({
             path: "exercises",
-            match: dateQuery.date ? dateQuery : {},
+            match: dateQuery,
             options: limitQuery,
         });
         const log = user.exercises.map((ex) => {
@@ -131,6 +137,7 @@ app.get("/api/users/:_id/logs", async (req, res) => {
         res.json({
             username: user.username,
             count: log.length,
+            ...dateInfo,
             _id: user._id,
             log: log,
         });
