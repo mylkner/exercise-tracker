@@ -28,7 +28,7 @@ const createExercise = async (description, duration, date, userId) => {
         const exerciseData = await Exercise.create({
             description: description,
             duration: duration,
-            date: new Date().toDateString(),
+            date: date,
         });
 
         await User.findByIdAndUpdate(userId, {
@@ -80,7 +80,7 @@ app.post("/api/users/:_id/exercises", async (req, res) => {
         const exercise = await createExercise(
             req.body.description,
             req.body.duration,
-            req.body.date,
+            req.body.date ? new Date(req.body.date) : new Date(),
             user._id
         );
 
@@ -88,7 +88,7 @@ app.post("/api/users/:_id/exercises", async (req, res) => {
             username: user.username,
             description: exercise.description,
             duration: exercise.duration,
-            date: exercise.date,
+            date: exercise.date.toDateString(),
             _id: user._id,
         });
     } catch (err) {
@@ -108,6 +108,8 @@ app.get("/api/users/:_id/logs", async (req, res) => {
                 date: ex.date,
             };
         });
+
+        const { from, to, limit } = req.query;
 
         res.json({
             username: user.username,
